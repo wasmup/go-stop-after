@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -67,6 +68,35 @@ func BenchmarkDoneChannel(b *testing.B) {
 		case <-done:
 			// break
 		default:
+			count++
+		}
+	}
+	_ = count
+}
+
+type foo struct {
+	sync.Mutex
+	state bool
+}
+
+func (p *foo) end() {
+	p.Lock()
+	p.state = true
+	p.Unlock()
+}
+func (p *foo) isDone() bool {
+	var b bool
+	p.Lock()
+	b = p.state
+	p.Unlock()
+	return b
+}
+func BenchmarkAfterFuncMutex(b *testing.B) {
+	var it = foo{}
+	time.AfterFunc(d, func() { it.end() })
+	var count = 0
+	for i := 0; i < b.N; i++ {
+		if it.isDone() {
 			count++
 		}
 	}
