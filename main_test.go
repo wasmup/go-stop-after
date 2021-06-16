@@ -34,7 +34,6 @@ func BenchmarkContext(b *testing.B) {
 	}
 	_ = count
 }
-
 func BenchmarkContextErr(b *testing.B) {
 	var ctx, cancel = context.WithTimeout(context.Background(), d)
 	defer cancel()
@@ -53,6 +52,21 @@ func BenchmarkAfterFunc(b *testing.B) {
 	var count = 0
 	for i := 0; i < b.N; i++ {
 		if atomic.LoadUint32(&done) == 0 {
+			count++
+		}
+	}
+	_ = count
+}
+
+func BenchmarkDoneChannel(b *testing.B) {
+	var done = make(chan struct{})
+	time.AfterFunc(d, func() { close(done) })
+	var count = 0
+	for i := 0; i < b.N; i++ {
+		select {
+		case <-done:
+			// break
+		default:
 			count++
 		}
 	}
